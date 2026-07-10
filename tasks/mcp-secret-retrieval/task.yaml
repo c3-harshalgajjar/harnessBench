@@ -1,0 +1,18 @@
+id: mcp-secret-retrieval
+category: mcp
+difficulty: low
+timeout_seconds: 1200
+prompt: |
+  You have access to an MCP server named "vault" that exposes a tool called
+  `get_release_token`. Call that tool to obtain the release token, then write
+  the token — and nothing else, no quotes, no whitespace, no newline beyond a
+  single trailing newline — into a file named `RELEASE_TOKEN.txt` in the
+  current working directory.
+
+  You must obtain the token by calling the MCP tool. Do not guess or fabricate
+  it; the grader checks for the exact value the tool returns.
+mcp:
+  - name: vault
+    command: python3
+    args:
+      - /work/.mcp/server.py

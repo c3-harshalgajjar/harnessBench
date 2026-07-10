@@ -1,0 +1,31 @@
+id: context-fill-ledger-audit
+category: context-fill
+difficulty: high
+timeout_seconds: 2400
+prompt: |
+  This workspace is a large synthetic codebase: hundreds of module files under
+  `modules/`, named `mod_000.txt` through `mod_399.txt`. Each file defines a
+  handful of constants.
+
+  Scattered across these files are "ledger entries" — lines of the exact form:
+
+      LEDGER <ID> <OP> <AMOUNT>
+
+  where <ID> is like `LG-0007`, <OP> is either `CREDIT` or `DEBIT`, and <AMOUNT>
+  is an integer number of cents. A given <ID> may appear multiple times across
+  different files with different ops/amounts.
+
+  Your job:
+    1. Read the module files and find every LEDGER line. You will likely need to
+       read many/most files — the ledger entries are spread throughout, including
+       in the earliest files.
+    2. Compute, for each distinct <ID>, its net balance in cents:
+       sum of CREDIT amounts minus sum of DEBIT amounts.
+    3. Write a file `balances.json` in the workspace root: an object mapping each
+       <ID> to its integer net balance, e.g. {"LG-0007": 1500, "LG-0012": -300}.
+       Include every ID that appears at least once. Do not include IDs that never
+       appear.
+
+  Be thorough: entries in the earliest files count just as much as the latest.
+  The grader checks the full balance map exactly.
+mcp: []

@@ -1,0 +1,17 @@
+id: react-cart-total-bug
+category: react
+difficulty: low
+timeout_seconds: 1200
+prompt: |
+  This is a small React + Vite shopping-cart app. There is a bug: the cart
+  subtotal shown in the header does not update when an item's quantity is
+  changed with the +/- steppers, and the "Free shipping" threshold banner
+  (which should appear once the subtotal reaches $50) never shows.
+
+  Fix the bug so that:
+    1. Changing an item's quantity immediately updates the header subtotal.
+    2. When the subtotal is >= $50, a banner with the text "You've unlocked
+       free shipping!" is rendered; below $50 it must not be rendered.
+
+  Do not change the public component names, props, or the data-testid
+  attributes already present. Keep the fix minimal.

@@ -1,0 +1,40 @@
+# harnessbench suite configuration.
+#
+# The model + thinking budget below are PINNED SERVER-SIDE at the LiteLLM proxy.
+# Every harness is told to use `bench_model_name`; the proxy overwrites the
+# request to `pinned_model` at `thinking_budget_tokens` regardless of what the
+# harness asks for. This is what makes the comparison a pure harness measurement.
+bench_model_name: bench-model
+pinned_model: anthropic/claude-opus-4-8
+thinking_budget_tokens: 8192
+
+# Repeated trials per (task x harness). Token/latency runs are stochastic — the
+# report uses median + spread, never a single run.
+trials: 3
+
+# Empty = run every task discovered under tasks/. List ids to scope a run.
+task_ids: []
+
+harnesses:
+  - name: claude
+    adapter: claude
+    eligible: true
+  - name: opencode
+    adapter: opencode
+    eligible: true
+  - name: pi
+    adapter: pi
+    eligible: true
+  - name: codex
+    adapter: codex
+    eligible: true          # runtime-probed; skipped if `codex` not on PATH
+  - name: bob
+    adapter: bob
+    eligible: true
+    run_on_host: true       # Bob shells out to an inner runtime; runs on host
+    inner_harness_configurable: true
+  # Cursor CLI routes through its own hosted gateway and cannot be model-pinned,
+  # so it is NOT scored. Kept here (eligible: false) for the unmatched appendix.
+  - name: cursor
+    adapter: cursor
+    eligible: false

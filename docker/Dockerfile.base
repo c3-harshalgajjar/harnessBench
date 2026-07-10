@@ -1,0 +1,49 @@
+# harnessbench base image: a neutral dev environment every harness runs inside.
+#
+# Goal: give each harness identical tooling (node, python, git, ripgrep, the CLIs
+# themselves) so the ONLY variable is the harness. Steering-file sanitization and
+# MCP-config materialization happen at container start in entrypoint.sh, not here,
+# because they depend on the mounted /work and the run's env.
+#
+# The harness CLIs are installed here at pinned versions. Bob is the exception — it
+# runs on the host (see BobAdapter), so it is not installed in this image.
+
+FROM node:20-bookworm
+
+# --- OS tooling -------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        ripgrep \
+        jq \
+        curl \
+        ca-certificates \
+        python3 \
+        python3-pip \
+        python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Playwright (browser tasks) --------------------------------------------
+# Chromium + its OS deps, installed once into the image so browser tasks don't
+# pay the download at run time and stay hermetic.
+RUN npm install -g playwright@1.47.0 \
+    && playwright install --with-deps chromium
+
+# --- Harness CLIs (pinned) --------------------------------------------------
+# Each is the headless-capable CLI the matching adapter shells out to. Versions
+# are pinned so a leaderboard is reproducible; bump deliberately.
+RUN npm install -g \
+        @anthropic-ai/claude-code@latest \
+        opencode-ai@latest
+
+# opencode installs as `opencode`; claude-code as `claude`. pi and codex are
+# installed conditionally below (their npm names differ / may be private); a run
+# whose adapter CLI is missing is recorded as ineligible rather than crashing.
+RUN npm install -g @pihq/pi@latest 2>/dev/null || echo "pi not installed (optional)"
+RUN npm install -g @openai/codex@latest 2>/dev/null || echo "codex not installed (optional)"
+
+# --- entrypoint -------------------------------------------------------------
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /work
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

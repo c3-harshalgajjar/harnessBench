@@ -1,0 +1,32 @@
+# LiteLLM proxy config — the ONLY place that decides the model + thinking budget.
+#
+# Every harness is told to use the logical name `bench-model`. This route maps it,
+# server-side, to a single pinned Anthropic model with a fixed thinking budget. A
+# harness asking for "opus", "sonnet", "auto", or anything else still resolves here
+# because the adapters only ever hand it `bench-model`. The usage_logger callback
+# records one JSONL row per request and asserts the resolved model+budget.
+#
+# The real ANTHROPIC_API_KEY is read from the proxy's own environment and never
+# exposed to any harness container.
+
+model_list:
+  - model_name: bench-model
+    litellm_params:
+      model: anthropic/claude-opus-4-8
+      api_key: os.environ/ANTHROPIC_API_KEY
+      # Thinking budget is pinned here, server-side. Harnesses cannot change it.
+      thinking:
+        type: enabled
+        budget_tokens: 8192
+
+litellm_settings:
+  # Custom callback writes the authoritative per-request usage JSONL.
+  callbacks: harnessbench.proxy.usage_logger.usage_callback_instance
+  # Drop any client-supplied params that could perturb parity (temperature,
+  # reasoning_effort presets, top_p, etc.). The route's params win.
+  drop_params: true
+
+general_settings:
+  # A dummy master key the harnesses present; the real provider key stays in the
+  # proxy env only.
+  master_key: os.environ/HARNESSBENCH_PROXY_KEY

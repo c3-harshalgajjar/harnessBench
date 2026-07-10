@@ -1,0 +1,24 @@
+id: browser-scrape-price
+category: browser
+difficulty: mid
+timeout_seconds: 1800
+prompt: |
+  This workspace contains a small static website under `site/` (an `index.html`
+  plus assets) and a Playwright setup already installed in the base image.
+
+  The site renders a product catalog. Several products are marked as "on sale"
+  (they have the CSS class `on-sale` on their `.product` card). Each product card
+  has a `data-sku` attribute and a `.price` element whose text is like `$19.99`.
+
+  Write a Node script at `scrape.mjs` in the workspace root that:
+    1. Serves `site/` locally (any port) OR loads `site/index.html` via a
+       file:// URL, using Playwright (Chromium, headless).
+    2. Collects every product currently on sale (class `on-sale`).
+    3. Writes a JSON file `sale_report.json` in the workspace root: an array of
+       objects sorted ascending by price, each `{ "sku": <string>, "price": <number> }`
+       where price is the numeric dollar value (e.g. 19.99, not "$19.99").
+
+  Then run the script so that `sale_report.json` is produced. The grader reads
+  `sale_report.json` — the script must actually execute against the rendered DOM
+  (not be hand-computed), and Playwright must be used to read the page.
+mcp: []
