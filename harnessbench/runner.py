@@ -174,13 +174,27 @@ class Runner:
     def _one_direct(self, task: Task, harness: str, adapter, trial: int) -> RunResult:
         run_id = f"{task.id}__{harness}__t{trial}__{secrets.token_hex(4)}"
         split = None
+        resolved_model = None
+        # Bob emits no usage on stdout; snapshot its cost-ledger watermark so we can
+        # attribute exactly this run's rows afterward (runs are serialized).
+        ledger_watermark = (
+            adapter.ledger_watermark() if hasattr(adapter, "ledger_watermark") else None
+        )
         with tempfile.TemporaryDirectory(prefix="hb-") as tmp:
             work = _copy_workspace(task, Path(tmp))
             stdout, stderr, wall, timed_out = run_on_host(adapter, task, run_id, work)
             native = adapter.parse_native_usage(stdout, stderr)
-            # Prefer the split breakdown when the adapter exposes it (Claude does).
+            # Prefer a stdout split when the adapter exposes it (claude, cursor).
             if hasattr(adapter, "parse_usage_split"):
                 split = adapter.parse_usage_split(stdout)
+            # Fall back to a post-run ledger read (bob) when stdout has no usage.
+            if split is None and ledger_watermark is not None:
+                ledger = adapter.usage_since(ledger_watermark)
+                if ledger:
+                    resolved_model = ledger.pop("resolved_model", None) or None
+                    split = ledger
+                    if native is None:
+                        native = split.get("total_tokens")
             passed = False
             if not timed_out:
                 passed, _ = run_hidden_tests(work, task.tests_dir, self.image)
@@ -196,6 +210,7 @@ class Runner:
             run_mode="direct",
             tokens_verified=False,
             model_parity_ok=False,
+            resolved_model=resolved_model,
             passed=passed,
             timed_out=timed_out,
             wall_seconds=round(wall, 2),

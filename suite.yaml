@@ -37,8 +37,10 @@ harnesses:
     eligible: true
     run_on_host: true       # Bob shells out to an inner runtime; runs on host
     inner_harness_configurable: true
-  # Cursor CLI routes through its own hosted gateway and cannot be model-pinned,
-  # so it is NOT scored. Kept here (eligible: false) for the unmatched appendix.
+  # Cursor CLI routes through its own hosted gateway and cannot be model-pinned.
+  # It is NEVER scored (probe_eligible() is always False → excluded from the proxied
+  # tier). It CAN run in the no-key (direct) path as a self-reported/unverified row.
   - name: cursor
     adapter: cursor
-    eligible: false
+    eligible: true
+    run_on_host_when_no_key: true
