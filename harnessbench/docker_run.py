@@ -72,3 +72,43 @@ def run_in_container(
         stderr = e.stderr.decode() if isinstance(e.stderr, bytes) else (e.stderr or "")
     wall = time.time() - start
     return stdout, stderr, wall, timed_out
+
+
+def run_on_host(
+    adapter: Adapter,
+    task: Task,
+    run_id: str,
+    work_copy: Path,
+) -> tuple[str, str, float, bool]:
+    """Run the adapter's DIRECT-mode argv on the host, inheriting host env (so a
+    harness's own subscription auth — e.g. Claude Code's Keychain OAuth — works).
+
+    Mirrors run_in_container's return contract: (stdout, stderr, wall, timed_out).
+    """
+    import os
+
+    argv = adapter.build_cmd_direct(task, run_id)
+    env = {**os.environ, **adapter.env_direct(run_id)}
+    # Materialize MCP config in the workspace so `--mcp-config mcp.json` resolves
+    # relative to cwd. Server command/args run on the host, from work_copy.
+    if task.mcp:
+        (work_copy / "mcp.json").write_text(_mcp_json(task.mcp))
+
+    start = time.time()
+    timed_out = False
+    try:
+        proc = subprocess.run(
+            argv,
+            cwd=str(work_copy),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=task.timeout_seconds,
+        )
+        stdout, stderr = proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired as e:
+        timed_out = True
+        stdout = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout or "")
+        stderr = e.stderr.decode() if isinstance(e.stderr, bytes) else (e.stderr or "")
+    wall = time.time() - start
+    return stdout, stderr, wall, timed_out

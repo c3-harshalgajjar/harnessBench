@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -80,6 +81,10 @@ class Harness(BaseModel):
     eligible: bool = True
     # If this harness must run on the host instead of in-container (Bob), flag it.
     run_on_host: bool = False
+    # Opt into host execution ONLY in the no-key (direct) path — e.g. Claude Code with
+    # subscription OAuth, whose credential lives in the host Keychain and can't be
+    # mounted into a Linux container. Distinct from Bob's always-host `run_on_host`.
+    run_on_host_when_no_key: bool = False
     inner_harness_configurable: bool = False  # bob only
 
 
@@ -92,6 +97,10 @@ class Suite(BaseModel):
     bench_model_name: str = "bench-model"
     pinned_model: str = "anthropic/claude-opus-4-8"
     thinking_budget_tokens: int = 8192
+    # Model alias handed to a harness in DIRECT (no-key) mode, where no proxy exists
+    # to rewrite `bench_model_name`. Must be an alias the harness resolves natively
+    # (e.g. Claude Code's `opus` -> latest Opus).
+    direct_model_alias: str = "opus"
     trials: int = 3
     harnesses: list[Harness]
     task_ids: list[str] = Field(default_factory=list)  # empty = all discovered
@@ -107,6 +116,16 @@ class RunResult(BaseModel):
     harness: str
     inner_harness: str | None = None  # bob only
     trial: int
+
+    # How this run was executed:
+    #   "proxied" — traffic went through the LiteLLM proxy; model+thinking pinned
+    #               server-side; tokens are proxy-authoritative.
+    #   "direct"  — no API key; harness ran on the host with its own (subscription)
+    #               auth; nothing pinned; tokens are the harness's self-report.
+    run_mode: Literal["proxied", "direct"] = "proxied"
+    # True only when token counts came from the proxy log. The report never ranks a
+    # verified count against a self-reported one.
+    tokens_verified: bool = False
 
     # Model parity assertion — every proxied request must resolve to these.
     resolved_model: str | None = None

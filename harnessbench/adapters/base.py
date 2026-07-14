@@ -46,6 +46,20 @@ class Adapter(ABC):
         """Best-effort native token total for cross-check. None if unavailable."""
         return None
 
+    def build_cmd_direct(self, task: Task, run_id: str) -> list[str]:
+        """argv for running WITHOUT the proxy (no-key / direct mode).
+
+        Defaults to the proxied argv; adapters override when direct mode needs a
+        different model alias or flags (e.g. Claude Code can't say `bench-model`
+        when there's no proxy to rewrite it).
+        """
+        return self.build_cmd(task, run_id)
+
+    def env_direct(self, run_id: str) -> dict[str, str]:
+        """Env for direct mode. Defaults to empty so the harness uses its own
+        native (subscription) auth — no proxy base-URL override."""
+        return {}
+
     @abstractmethod
     def probe_eligible(self) -> bool:
         """True if this harness accepts our proxy base URL (scored-tier gate)."""

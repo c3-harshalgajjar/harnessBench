@@ -19,6 +19,10 @@ harnesses:
   - name: claude
     adapter: claude
     eligible: true
+    # Claude Code authenticates with a subscription OAuth token in the host Keychain,
+    # which can't be mounted into a Linux container. In the no-key (direct) path it
+    # runs on the host with that native auth; in the proxied path it uses the key.
+    run_on_host_when_no_key: true
   - name: opencode
     adapter: opencode
     eligible: true

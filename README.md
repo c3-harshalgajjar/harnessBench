@@ -179,6 +179,34 @@ tokens-per-pass among harnesses with comparable pass rates.
 
 ---
 
+## Running without an API key
+
+You don't need a provider key to try the suite. The runner picks its mode from
+`ANTHROPIC_API_KEY`:
+
+| | **Mode A — proxied** (key set) | **Mode B — direct** (no key) |
+|---|---|---|
+| Model + thinking | Pinned server-side by the proxy | Whatever the harness resolves natively |
+| Where harnesses run | In-container (Bob on host) | On the host, with the harness's own subscription auth |
+| Which harnesses run | Every eligible harness | Only those with native host auth (e.g. Claude Code); others are skipped |
+| Tokens | Proxy-authoritative (`tokens_verified = true`) | Harness self-report (`tokens_verified = false`) |
+| Comparable across harnesses? | **Yes** — that's the point | **No** — pass/fail + wall are honest, tokens are a rough intra-harness signal |
+
+In direct mode the leaderboard lands those runs in a **Self-reported (unverified)**
+section, kept strictly separate from the scored tier so a self-reported token
+count is never ranked against a proxy-verified one.
+
+```bash
+# No key exported → direct mode. Claude Code runs on the host with its own login.
+unset ANTHROPIC_API_KEY
+harnessbench run --suite suite.yaml --out results/
+```
+
+The moment you export a real key, the same command runs Mode A and you get the
+fully-comparable scored leaderboard.
+
+---
+
 ## Status
 
 v1 is a working skeleton plus four seed tasks (one per category). It is honestly
